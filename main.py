@@ -1,6 +1,4 @@
-from pathlib import Path
 
-code = r'''# main.py
 import asyncio
 import json
 import os
