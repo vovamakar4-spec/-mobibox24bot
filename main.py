@@ -76,7 +76,10 @@ async def repair_name(message: Message, state: FSMContext):
 async def repair_model(message: Message, state: FSMContext):
     await state.update_data(model=message.text)
     await state.set_state(RepairForm.problem)
-    await message.answer("🛠 Опишіть несправність:")
+    await message.answer("🛠 Опишіть несправність:")@dp.message(RepairForm.problem)
+async def repair_problem(message: Message, state: FSMContext):
+    await state.update_data(problem=message.text)
+
     user_data = await state.get_data()
 
     db = load_db()
@@ -167,4 +170,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main()
