@@ -135,23 +135,24 @@ async def admin_status(message: Message):
 
     db = load_db()
 
-    if repair_id not in db["repairs"]:
-        await message.answer("❌ Заявку не знайдено.")
-        return
-
-    db["repairs"][repair_id]["status"] = new_status
-    save_db(db)
-
-    await message.answer(f"✅ Статус заявки №{repair_id} змінено на: {new_status}")
-
-
-@dp.message()
+    i
 async def check_status(message: Message):
     if not message.text.isdigit():
         return
 
     db = load_db()
 
+    repair = db["repairs"].get(message.text)
+
+    i
+    )from aiogram.fsm.state import default_state
+
+@dp.message(default_state)
+async def check_status(message: Message):
+    if not message.text.isdigit():
+        return
+
+    db = load_db()
     repair = db["repairs"].get(message.text)
 
     if not repair:
@@ -161,8 +162,7 @@ async def check_status(message: Message):
     await message.answer(
         f"📦 Заявка №{message.text}\n\n"
         f"📱 {repair['model']}\n"
-        f"📊 Статус: {repair['status']}"
-    )
+        f"📊 Статус: {repair['status']}")
 
 
 async def main():
