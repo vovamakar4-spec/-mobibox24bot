@@ -83,7 +83,10 @@ async def repair_phone(message: Message, state: FSMContext):
 async def repair_model(message: Message, state: FSMContext):
     await state.update_data(model=message.text)
     await state.set_state(RepairForm.problem)
-    await message.answer("🛠 Опишіть несправність:")@dp.message(RepairForm.problem)
+    await message.answerawait message.answer("🛠 Опишіть несправність:")
+
+
+@dp.message(RepairForm.problem)
 async def repair_problem(message: Message, state: FSMContext):
     await state.update_data(problem=message.text)
 
