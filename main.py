@@ -10,8 +10,6 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = 911749743
 
-repair_status = {}
-
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
 
@@ -22,19 +20,22 @@ class Repair(StatesGroup):
     model = State()
     problem = State()
 
+
 menu = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="🔧 Здати телефон у ремонт")],
-        [KeyboardButton(text="📦 Статус ремонту")]
+        [KeyboardButton(text="🔧 Здати телефон у ремонт")]
     ],
     resize_keyboard=True
 )
+
+
 @dp.message(CommandStart())
 async def start(message: Message):
     await message.answer(
         "👋 Ласкаво просимо до Mobibox!\n\nОберіть дію:",
         reply_markup=menu
     )
+
 
 @dp.message(F.text == "🔧 Здати телефон у ремонт")
 async def repair(message: Message, state: FSMContext):
@@ -48,11 +49,13 @@ async def get_name(message: Message, state: FSMContext):
     await state.set_state(Repair.phone)
     await message.answer("📞 Введіть номер телефону:")
 
+
 @dp.message(Repair.phone)
 async def get_phone(message: Message, state: FSMContext):
     await state.update_data(phone=message.text)
     await state.set_state(Repair.model)
     await message.answer("📱 Введіть модель телефону:")
+
 
 @dp.message(Repair.model)
 async def get_model(message: Message, state: FSMContext):
@@ -60,12 +63,13 @@ async def get_model(message: Message, state: FSMContext):
     await state.set_state(Repair.problem)
     await message.answer("🛠 Опишіть несправність:")
 
+
 @dp.message(Repair.problem)
 async def get_problem(message: Message, state: FSMContext):
     await state.update_data(problem=message.text)
-    
- data = await state.get_data()
-repair_status[message.from_user.id] = "🟡 В ремонті"
+
+    data = await state.get_data()
+
     text = (
         "📥 Нова заявка\n\n"
         f"👤 Ім'я: {data['name']}\n"
@@ -82,15 +86,10 @@ repair_status[message.from_user.id] = "🟡 В ремонті"
         "Майстер зв'яжеться з вами найближчим часом.",
         reply_markup=menu
     )
- await state.clear()
 
-@dp.message(F.text == "📦 Статус ремонту")
-async def status(message: Message):
-    status = repair_status.get(
-        message.from_user.id,
-        "❌ Заявку не знайдено."
-    )
- await message.answer(f"📦 Статус ремонту:\n\n{status}")
+    await state.clear()
+
+
 async def main():
     await dp.start_polling(bot)
 
