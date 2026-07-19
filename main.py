@@ -1,55 +1,51 @@
-
 import asyncio
 import json
 import os
 
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import Command, CommandStart
-from aiogram.fsm.context import FSMContext
+from aiogram.filters import CommandStart, Command
+from aiogram.types import (
+    Message,
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+)
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
+from aiogram.fsm.context import FSMContext
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = 911749743
-DATA_FILE = "repairs.json"
 
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
 
+DB_FILE = "repairs.json"
 
-def load_repairs():
-    if not os.path.exists(DATA_FILE):
-        return {}
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
+
+def load_db():
+    if not os.path.exists(DB_FILE):
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump({"last_id": 1000, "repairs": {}}, f)
+
+    with open(DB_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def save_repairs(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+def save_db(data):
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
 
-def next_number(data):
-    if not data:
-        return 1001
-    return max(int(x) for x in data.keys()) + 1
-
-
-class Repair(StatesGroup):
+class RepairForm(StatesGroup):
     name = State()
     phone = State()
     model = State()
     problem = State()
 
 
-class CheckStatus(StatesGroup):
-    number = State()
-
-
 menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🔧 Здати телефон у ремонт")],
-        [KeyboardButton(text="📦 Перевірити статус ремонту")]
+        [KeyboardButton(text="📦 Перевірити статус")]
     ],
     resize_keyboard=True
 )
@@ -57,110 +53,123 @@ menu = ReplyKeyboardMarkup(
 
 @dp.message(CommandStart())
 async def start(message: Message):
-    await message.answer("Ласкаво просимо до Mobibox!", reply_markup=menu)
+    await message.answer(
+        "👋 Вітаємо у Mobibox!\n\nОберіть дію:",
+        reply_markup=menu
+    )
 
 
 @dp.message(F.text == "🔧 Здати телефон у ремонт")
-async def repair(message: Message, state: FSMContext):
-    await state.set_state(Repair.name)
-    await message.answer("Введіть ім'я:")
+async def repair_start(message: Message, state: FSMContext):
+    await state.set_state(RepairForm.name)
+    await message.answer("👤 Введіть ваше ім'я:")
 
 
-@dp.message(Repair.name)
-async def r_name(message: Message, state: FSMContext):
+@dp.message(RepairForm.name)
+async def repair_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
-    await state.set_state(Repair.phone)
-    await message.answer("Телефон:")
+    await state.set_state(RepairForm.phone)
+    await message.answer("📞 Введіть номер телефону:")
 
 
-@dp.message(Repair.phone)
-async def r_phone(message: Message, state: FSMContext):
+@dp.message(RepairForm.phone)
+async def repair_phone(message: Message, state: FSMContext):
     await state.update_data(phone=message.text)
-    await state.set_state(Repair.model)
-    await message.answer("Модель:")
+    await state.set_state(RepairForm.model)
+    await message.answer("📱 Введіть модель телефону:")
 
 
-@dp.message(Repair.model)
-async def r_model(message: Message, state: FSMContext):
+@dp.message(RepairForm.model)
+async def repair_model(message: Message, state: FSMContext):
     await state.update_data(model=message.text)
-    await state.set_state(Repair.problem)
-    await message.answer("Опишіть несправність:")
-
-
-@dp.message(Repair.problem)
-async def r_problem(message: Message, state: FSMContext):
+    await state.set_state(RepairForm.problem)
+    await message.answer("🛠 Опишіть несправність:")@dp.message(RepairForm.problem)
+async def repair_problem(message: Message, state: FSMContext):
     await state.update_data(problem=message.text)
-    data = await state.get_data()
 
-    repairs = load_repairs()
-    num = next_number(repairs)
+    user_data = await state.get_data()
 
-    repairs[str(num)] = {
-        "name": data["name"],
-        "phone": data["phone"],
-        "model": data["model"],
-        "problem": data["problem"],
+    db = load_db()
+    db["last_id"] += 1
+    repair_id = str(db["last_id"])
+
+    db["repairs"][repair_id] = {
+        "name": user_data["name"],
+        "phone": user_data["phone"],
+        "model": user_data["model"],
+        "problem": user_data["problem"],
         "status": "Прийнято"
     }
-    save_repairs(repairs)
+
+    save_db(db)
 
     await bot.send_message(
         ADMIN_ID,
-        f"📥 Нова заявка #{num}\n\n"
-        f"👤 {data['name']}\n"
-        f"📞 {data['phone']}\n"
-        f"📱 {data['model']}\n"
-        f"🛠 {data['problem']}"
+        f"🆕 Нова заявка №{repair_id}\n\n"
+        f"👤 {user_data['name']}\n"
+        f"📞 {user_data['phone']}\n"
+        f"📱 {user_data['model']}\n"
+        f"🛠 {user_data['problem']}"
     )
 
     await message.answer(
-        f"✅ Заявку прийнято.\nНомер: #{num}\n"
-        "Збережіть його для перевірки статусу.",
-        reply_markup=menu
+        f"✅ Вашу заявку прийнято!\n\n"
+        f"📦 Номер заявки: {repair_id}\n"
+        f"Використайте кнопку «📦 Перевірити статус» для перевірки."
     )
+
     await state.clear()
 
 
-@dp.message(F.text == "📦 Перевірити статус ремонту")
-async def check(message: Message, state: FSMContext):
-    await state.set_state(CheckStatus.number)
-    await message.answer("Введіть номер заявки (наприклад 1001):")
-
-
-@dp.message(CheckStatus.number)
-async def check_num(message: Message, state: FSMContext):
-    repairs = load_repairs()
-    num = message.text.replace("#", "")
-    if num in repairs:
-        r = repairs[num]
-        await message.answer(
-            f"📦 Заявка #{num}\n"
-            f"📱 {r['model']}\n"
-            f"Статус: {r['status']}",
-            reply_markup=menu
-        )
-    else:
-        await message.answer("Заявку не знайдено.", reply_markup=menu)
-    await state.clear()
+@dp.message(F.text == "📦 Перевірити статус")
+async def status_start(message: Message):
+    await message.answer("Введіть номер заявки:")
 
 
 @dp.message(Command("status"))
-async def status(message: Message):
+async def admin_status(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
+
     parts = message.text.split(maxsplit=2)
+
     if len(parts) < 3:
-        await message.answer("Приклад: /status 1001 Готовий")
+        await message.answer("Приклад:\n/status 1001 Готовий")
         return
-    num = parts[1].replace("#", "")
+
+    repair_id = parts[1]
     new_status = parts[2]
-    repairs = load_repairs()
-    if num not in repairs:
-        await message.answer("Номер не знайдено.")
+
+    db = load_db()
+
+    if repair_id not in db["repairs"]:
+        await message.answer("❌ Заявку не знайдено.")
         return
-    repairs[num]["status"] = new_status
-    save_repairs(repairs)
-    await message.answer(f"Статус #{num} оновлено на: {new_status}")
+
+    db["repairs"][repair_id]["status"] = new_status
+    save_db(db)
+
+    await message.answer(f"✅ Статус заявки №{repair_id} змінено на: {new_status}")
+
+
+@dp.message()
+async def check_status(message: Message):
+    if not message.text.isdigit():
+        return
+
+    db = load_db()
+
+    repair = db["repairs"].get(message.text)
+
+    if not repair:
+        await message.answer("❌ Заявку не знайдено.")
+        return
+
+    await message.answer(
+        f"📦 Заявка №{message.text}\n\n"
+        f"📱 {repair['model']}\n"
+        f"📊 Статус: {repair['status']}"
+    )
 
 
 async def main():
@@ -169,7 +178,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-'''
-path="/mnt/data/main.py"
-Path(path).write_text(code,encoding="utf-8")
-print(path)
