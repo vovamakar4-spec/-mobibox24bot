@@ -72,24 +72,11 @@ async def repair_name(message: Message, state: FSMContext):
     await message.answer("📞 Введіть номер телефону:")
 
 
-@dp.message(RepairForm.phone)
-async def repair_phone(message: Message, state: FSMContext):
-    await state.update_data(phone=message.text)
-    await state.set_state(RepairForm.model)
-    await message.answer("📱 Введіть модель телефону:")
-
-
 @dp.message(RepairForm.model)
 async def repair_model(message: Message, state: FSMContext):
     await state.update_data(model=message.text)
     await state.set_state(RepairForm.problem)
-    await message.answerawait message.answer("🛠 Опишіть несправність:")
-
-
-@dp.message(RepairForm.problem)
-async def repair_problem(message: Message, state: FSMContext):
-    await state.update_data(problem=message.text)
-
+    await message.answer("🛠 Опишіть несправність:")
     user_data = await state.get_data()
 
     db = load_db()
