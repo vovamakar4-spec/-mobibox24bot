@@ -10,6 +10,8 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = 911749743
 
+repair_status = {}
+
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
 
@@ -20,15 +22,13 @@ class Repair(StatesGroup):
     model = State()
     problem = State()
 
-
 menu = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="🔧 Здати телефон у ремонт")]
+        [KeyboardButton(text="🔧 Здати телефон у ремонт")],
+        [KeyboardButton(text="📦 Статус ремонту")]
     ],
     resize_keyboard=True
 )
-
-
 @dp.message(CommandStart())
 async def start(message: Message):
     await message.answer(
@@ -69,7 +69,7 @@ async def get_problem(message: Message, state: FSMContext):
     await state.update_data(problem=message.text)
 
     data = await state.get_data()
-
+repair_status[message.from_user.id] = "🟡 В ремонті"
     text = (
         "📥 Нова заявка\n\n"
         f"👤 Ім'я: {data['name']}\n"
@@ -89,7 +89,14 @@ async def get_problem(message: Message, state: FSMContext):
 
     await state.clear()
 
+@dp.message(F.text == "📦 Статус ремонту")
+async def status(message: Message):
+    status = repair_status.get(
+        message.from_user.id,
+        "❌ Заявку не знайдено."
+    )
 
+    await message.answer(f"📦 Статус ремонту:\n\n{status}")
 async def main():
     await dp.start_polling(bot)
 
