@@ -36,7 +36,6 @@ async def start(message: Message):
         reply_markup=menu
     )
 
-
 @dp.message(F.text == "🔧 Здати телефон у ремонт")
 async def repair(message: Message, state: FSMContext):
     await state.set_state(Repair.name)
@@ -49,13 +48,11 @@ async def get_name(message: Message, state: FSMContext):
     await state.set_state(Repair.phone)
     await message.answer("📞 Введіть номер телефону:")
 
-
 @dp.message(Repair.phone)
 async def get_phone(message: Message, state: FSMContext):
     await state.update_data(phone=message.text)
     await state.set_state(Repair.model)
     await message.answer("📱 Введіть модель телефону:")
-
 
 @dp.message(Repair.model)
 async def get_model(message: Message, state: FSMContext):
@@ -63,12 +60,11 @@ async def get_model(message: Message, state: FSMContext):
     await state.set_state(Repair.problem)
     await message.answer("🛠 Опишіть несправність:")
 
-
 @dp.message(Repair.problem)
 async def get_problem(message: Message, state: FSMContext):
     await state.update_data(problem=message.text)
-
-    data = await state.get_data()
+    
+ data = await state.get_data()
 repair_status[message.from_user.id] = "🟡 В ремонті"
     text = (
         "📥 Нова заявка\n\n"
@@ -86,8 +82,7 @@ repair_status[message.from_user.id] = "🟡 В ремонті"
         "Майстер зв'яжеться з вами найближчим часом.",
         reply_markup=menu
     )
-
-    await state.clear()
+ await state.clear()
 
 @dp.message(F.text == "📦 Статус ремонту")
 async def status(message: Message):
@@ -95,8 +90,7 @@ async def status(message: Message):
         message.from_user.id,
         "❌ Заявку не знайдено."
     )
-
-    await message.answer(f"📦 Статус ремонту:\n\n{status}")
+ await message.answer(f"📦 Статус ремонту:\n\n{status}")
 async def main():
     await dp.start_polling(bot)
 
